@@ -27,4 +27,7 @@ docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable -x scripts/*.s
   trap SIGINT.
 - **The ATS server needs two `app_update`s** after `app_info_update` ("Missing configuration").
 - **The log, not stdout**, has the `[MP]` lines the roster is read from.
+- **Each run gets its own server.log.txt** (rotate_log before the exec): never read the previous
+  run's lines for readiness or the roster. The parser keeps its place in /tmp.
+- **Real exports write DLC as unsigned numbers**: a quoted value stops the server. Never name DLC.
 - **Logon tokens are for the GAME's app** (227300 ETS2, 270880 ATS), not the server's.

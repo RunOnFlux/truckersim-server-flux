@@ -1,5 +1,5 @@
 #!/bin/bash
-# Shared helpers for The Isle image.
+# Shared helpers for the SCS convoy server image (Euro Truck Simulator 2 / American Truck Simulator).
 #
 # SOURCING THIS FILE MUST STAY SIDE-EFFECT FREE: tests/test-flux.sh sources it directly and
 # calls the functions with made-up inputs. Everything that decides something takes its inputs
@@ -7,7 +7,7 @@
 
 # ---------------------------------------------------------------------------------------------
 # Paths. Two volumes: the install (SteamCMD's, disposable, local to the node) and the data (the
-# server's -datapath and ours). The data is the only thing that has to survive.
+# server's home, XDG_DATA_HOME, and ours). The data is the only thing that has to survive.
 # ---------------------------------------------------------------------------------------------
 FLUX_SERVER_DIR="${FLUX_SERVER_DIR:-/mnt/scs/server}"
 FLUX_DATA_DIR="${FLUX_DATA_DIR:-/mnt/scs/data}"
@@ -16,6 +16,13 @@ FLUX_LOG="${FLUX_LOG:-${FLUX_STATE_DIR}/flux.log}"
 FLUX_LOG_MAX_LINES="${FLUX_LOG_MAX_LINES:-2000}"
 FLUX_BACKUP_DIR="${FLUX_BACKUP_DIR:-${FLUX_STATE_DIR}/backups}"
 FLUX_RESTART_MARKER="${FLUX_RESTART_MARKER:-/tmp/flux-restart-requested}"
+FLUX_RESTORE_MARKER="${FLUX_RESTORE_MARKER:-/tmp/flux-restore-requested}"
+# The game update a planned restart was for, and the one that failed to arrive (the watcher skips a
+# failed target for FLUX_UPDATE_RETRY_HOURS instead of restarting for it over and over).
+FLUX_UPDATE_TARGET="${FLUX_UPDATE_TARGET:-${FLUX_STATE_DIR}/update-target}"
+FLUX_UPDATE_FAILED="${FLUX_UPDATE_FAILED:-${FLUX_STATE_DIR}/update-failed}"
+FLUX_GAME_LOG_DIR="${FLUX_GAME_LOG_DIR:-${FLUX_STATE_DIR}/logs}"
+FLUX_GAME_LOG_KEEP="${FLUX_GAME_LOG_KEEP:-5}"
 
 # $1 = SCS_GAME. Prints "<steam app> <binary> <home folder>", or returns 1 for an unknown game.
 flux_scs_game() {
@@ -78,12 +85,43 @@ flux_restarts_in_window() {
 }
 
 # $1 = why the last generation ended. A restart the supervisor planned (a game update, the
-# daily restart, one the panel asked for) is the plan working, not a crash.
+# daily restart, one the panel asked for) is the plan working, not a crash; neither is Steam
+# dropping the server (its weekly maintenance), which is waited out with a growing backoff.
 flux_restart_counts() {
   case "$1" in
-    planned* | requested*) return 1 ;;
+    planned* | requested* | steam:*) return 1 ;;
     *) return 0 ;;
   esac
+}
+
+# stdin = the end of the server's log. True when it ended because Steam dropped it ("Steam
+# disconnected" is a known end of SCS's server).
+flux_steam_dropped() {
+  grep -qiE 'steam (is )?disconnected|disconnected from steam|logged ?off from steam|SteamAPI.*(fail|lost)'
+}
+
+# stdin = the end of the server's log. True when it stopped because it could not load its server
+# packages ("Failed to load server packages info", measured with a hand-written .sii).
+flux_packages_refused() {
+  grep -qiE 'Failed to load server packages|Server packages file not found|generated for different map|time stamp does not match|wrong version'
+}
+
+# $1 = the previous backoff in seconds (0 for none). Prints the next: 30 s, doubling, at most 600.
+flux_steam_backoff() {
+  local prev="${1:-0}"
+  [[ "${prev}" =~ ^[0-9]+$ ]] || prev=0
+  if [ "${prev}" -lt 30 ]; then printf '30'; elif [ $((prev * 2)) -gt 600 ]; then printf '600'; else printf '%s' $((prev * 2)); fi
+}
+
+# $1 = the update-failed file, $2 = the build on Steam now, $3 = now, $4 = hours to wait. True when
+# that same build failed to arrive less than $4 hours ago: no restart for it yet.
+flux_update_failed_recently() {
+  local target at
+  [ -f "$1" ] || return 1
+  read -r target at <"$1" || return 1
+  [ "${target}" = "$2" ] || return 1
+  [[ "${at}" =~ ^[0-9]+$ ]] || return 1
+  [ $(($3 - at)) -lt $(($4 * 3600)) ]
 }
 
 # ---------------------------------------------------------------------------------------------
