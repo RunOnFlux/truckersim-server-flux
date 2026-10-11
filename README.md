@@ -63,4 +63,6 @@ cargo in convoys).
 
 ## Versions
 
+- **1.0.1** (2026-10-11): `packages.default` is true for the shipped base-map pair of either game
+  (American Truck Simulator's lists two optional DLC, and read as an upload).
 - **1.0.0** (2026-10-11): first release.

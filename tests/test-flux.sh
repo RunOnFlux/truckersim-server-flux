@@ -75,6 +75,8 @@ check "not a packages file" "2" "$(status scs set-packages "${tmp}/p.dat" "${tmp
 scs reset-packages >/dev/null
 scs apply >/dev/null
 check "reset brings the base map back" "True" "$(scs packages | python3 -c 'import json,sys;print(json.load(sys.stdin)["packages"]["default"])')"
+scs SCS_GAME=ats apply >/dev/null
+check "the ATS base map is the default too (it lists optional DLC)" "True" "$(scs SCS_GAME=ats packages | python3 -c 'import json,sys;print(json.load(sys.stdin)["packages"]["default"])')"
 
 # The roster, from the server's log.
 py() { PYTHONPATH=scripts python3 -c "import fluxscs as t; $1"; }

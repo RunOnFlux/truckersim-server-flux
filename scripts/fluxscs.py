@@ -336,7 +336,13 @@ def packages_info():
     except OSError:
         return None
     info = parse_packages(text)
-    info["default"] = info.get("mods") == [] and info.get("essentialDlc") == [] and info.get("optionalDlc") == []
+    # The base map is the pair the image ships, whatever it lists: the American Truck Simulator one
+    # names two OPTIONAL DLC, so "no DLC and no mods" would call it an upload.
+    try:
+        shipped = open(os.path.join(DEFAULT_PACKAGES, GAME, "server_packages.sii"), encoding="utf-8", errors="replace").read()
+    except OSError:
+        shipped = None
+    info["default"] = text == shipped or (info.get("mods") == [] and info.get("essentialDlc") == [] and info.get("optionalDlc") == [])
     return info
 
 
