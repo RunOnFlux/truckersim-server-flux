@@ -63,7 +63,7 @@ cargo in convoys).
 | `flux-scs settings` / `set-settings '<json>'` | |
 | `flux-scs packages` / `set-packages <sii> <dat>` / `reset-packages` | the map packages: install a pair exported from the game (checked: a map that is not the other game's, DLC written as the game writes them, and the .dat's time stamp equal to the .sii's, so both come from the same export) |
 | `flux-scs backups` / `restore <name>` | the backups (name, size, date, why); a restore restarts the server onto one, after a safety backup ("pre-restore") |
-| `flux-scs restart` | |
+| `flux-scs restart` | `appliesOn`: `now` (the server is signalled, or the wait for new packages ends) or `start` (no game process while the supervisor downloads or backs off: the next start writes the saved settings). Exit 3 only when nothing is there to pick it up |
 
 ## Measured (ETS2 1.61.1.1, ATS 1.61.2.0)
 
@@ -80,6 +80,9 @@ cargo in convoys).
 
 ## Versions
 
+- **1.0.3** (2026-10-17): `restart` with no game process no longer answers "not running" while the
+  supervisor is alive (downloading, backing off, waiting for packages), so the panel never restarts
+  the container over a first download or onto the same refused packages.
 - **1.0.2** (2026-10-11): each run's own log (moved aside at every start; read incrementally); a
   restart is a new `generation`; `pending` with no settings file and after a reset; empty env values
   are unset; moderators merge; C1 controls and line separators dropped from text; an empty name

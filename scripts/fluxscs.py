@@ -738,6 +738,20 @@ def cmd_set_settings(raw):
 def cmd_restart():
     pids = subprocess.run(["pgrep", "-f", rf"^\./{G['binary']}"], capture_output=True, text=True).stdout.split()
     if not pids:
+        # No game process, but the supervisor may well be alive: a container restart then only
+        # throws its work away (the first 1.3 GB download, the Steam back-off) or fails the same way
+        # (refused packages). Exit 3 is kept for when nothing is there to pick the change up.
+        state = read_json(STATE_FILE, {}) or {}
+        if state.get("state") == "crashed" and "server packages" in str(state.get("message") or ""):
+            # The supervisor is waiting for new packages; the marker ends the wait.
+            with open(RESTART_MARKER, "w") as f:
+                f.write("requested: from the panel\n")
+            out({"ok": True, "appliesOn": "now"})
+            return
+        if state.get("state") in ("updating", "starting", "restarting"):
+            # The next start writes the configs from what is saved: nothing to signal.
+            out({"ok": True, "appliesOn": "start"})
+            return
         fail("the server is not running", 3)
     with open(RESTART_MARKER, "w") as f:
         f.write("requested: from the panel\n")

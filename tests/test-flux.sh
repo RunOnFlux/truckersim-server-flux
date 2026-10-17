@@ -75,6 +75,17 @@ check "a good token" "0" "$(status scs set-settings '{"token": "0123456789ABCDEF
 check "timezones out of range" "2" "$(status scs set-settings '{"timezones": 5}')"
 check "an unknown setting" "2" "$(status scs set-settings '{"pvp": true}')"
 
+# A restart with no game process: the supervisor picks it up when it is alive.
+check "no server and no supervisor is exit 3" "3" "$(scs state stopped; status scs restart)"
+check "while downloading, it applies on the start" "start" "$(scs state updating 'Downloading'; scs restart | python3 -c 'import json,sys;print(json.load(sys.stdin)["appliesOn"])')"
+check "and nothing is signalled" "1" "$(status test -f "${tmp}/restart")"
+check "in the back-off too" "0" "$(scs state restarting 'steam'; status scs restart)"
+scs state crashed "The server packages could not be loaded: upload a new pair" >/dev/null
+check "waiting for packages, it ends the wait" "now" "$(scs restart | python3 -c 'import json,sys;print(json.load(sys.stdin)["appliesOn"])')"
+check "through the marker" "0" "$(status test -f "${tmp}/restart")"
+rm -f "${tmp}/restart"
+scs state stopped >/dev/null
+
 # Packages.
 printf 'SiiNunit\n{\nserver_packages_info : _nameless.1 {\n version: 1\n dlc_essential_list: 1\n dlc_essential_list[0]: 2050001\n dlc_non_essential_list: 0\n mod_list: 1\n mod_list[0]: "promods"\n map_name: "/map/europe.mbd"\n roads_data_file_name: "/home/x/server_packages.dat"\n time_stamp: 1\n}\n}\n' >"${tmp}/p.sii"
 python3 -c 'import struct,sys; open(sys.argv[1],"wb").write(b"\x01\x00"+struct.pack("<I",1)+b"\x00"*40)' "${tmp}/p.dat"

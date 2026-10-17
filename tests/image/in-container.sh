@@ -123,6 +123,9 @@ entry=$!
 check "refused packages: the state says so" "0" "$(status wait_for '[ "$(state ${data} state)" = crashed ] && grep -q "server packages could not be loaded" ${data}/flux/state.json' 30)"
 sleep 3
 check "and it does not restart over and over" "1" "$(grep -c 'starting the server (generation' /tmp/entry.log)"
+check "a panel restart while it waits is taken, not \"not running\"" "now" "$(flux-scs restart | python3 -c 'import json,sys;print(json.load(sys.stdin)["appliesOn"])')"
+check "and the supervisor tries again" "0" "$(status wait_for '[ "$(grep -c "starting the server (generation" /tmp/entry.log)" -ge 2 ]' 30)"
+check "then waits again on the same packages" "0" "$(status wait_for '[ "$(state ${data} state)" = crashed ]' 40)"
 flux-scs reset-packages >/dev/null
 check "back on the base map once the packages change" "0" "$(status wait_for 'grep -q "\"running\"" ${data}/flux/state.json' 30)"
 kill -TERM "${entry}"
