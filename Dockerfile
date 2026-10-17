@@ -6,13 +6,18 @@
 # packages until the owner uploads their own (map DLC and mods come from the game's
 # export_server_packages), restarts onto game updates when nobody is driving, and gives the hub a
 # JSON status read off the server's log. See README.md.
-FROM steamcmd/steamcmd:ubuntu-24
+# The base. CI builds it pinned to the digest it resolved and records that digest in the
+# org.opencontainers.image.base.digest label, which the scheduled check compares against
+# (.github/ci/needs-rebuild.sh).
+ARG BASE_IMAGE=steamcmd/steamcmd:ubuntu-24
+FROM ${BASE_IMAGE}
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG FLUX_IMAGE_VERSION=dev
 
 # libatomic1 + libx11-6: what the server binary needs that the base lacks (ldd, 1.61).
 RUN apt-get update -y && \
+    apt-get upgrade -y --no-install-recommends && \
     apt-get install -y --no-install-recommends ca-certificates curl procps tzdata python3 libatomic1 libx11-6 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 

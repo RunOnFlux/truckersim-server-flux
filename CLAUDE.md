@@ -14,7 +14,7 @@ supervisor in bash. Same family as `~/work/corekeeper-server-flux`.
 ./tests/test-flux.sh
 docker build -t truckersim-server-flux:local .
 ./tests/test-image.sh
-docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable -x scripts/*.sh tests/*.sh tests/image/*.sh
+docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable -x scripts/*.sh tests/*.sh tests/image/*.sh .github/ci/*.sh
 ```
 
 ## Things that will bite you
