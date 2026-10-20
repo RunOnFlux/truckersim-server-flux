@@ -38,6 +38,8 @@ rm -f "${FLUX_RESTART_MARKER}"
 mkdir -p "${s}" "${d}" "${FLUX_STATE_DIR}" "${FLUX_GAME_LOG_DIR}" "$(dirname "${FLUX_LOG}")"
 # An older image kept flux.log on the synced data volume: move it here, once.
 flux_log_migrate "${FLUX_STATE_DIR}/flux.log"
+# Likewise the game's rotated logs, which older images kept in data/flux/logs.
+flux_game_logs_migrate "${FLUX_GAME_LOG_DIR}" "${FLUX_STATE_DIR}/logs"
 
 if ! game="$(flux_scs_game "${SCS_GAME:-ets2}")"; then
   flux_log "ERROR SCS_GAME='${SCS_GAME}' is neither ets2 nor ats; refusing to start"

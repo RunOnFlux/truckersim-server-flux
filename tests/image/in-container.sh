@@ -94,7 +94,8 @@ flux-scs restart >/dev/null
 check "a panel restart is a new generation" "0" "$(status wait_for '[ "$(state ${data} generation)" = 2 ] && grep -q "\"running\"" ${data}/flux/state.json' 30)"
 check "and applies the settings" "1" "$(grep -c 'welcome_message: "Hello"' "${ets2_home}/server_config.sii")"
 check "the new run's log holds only the new run" "1" "$(grep -c 'Session search id' "${ets2_home}/server.log.txt")"
-check "the previous run's log is kept aside" "0" "$(status wait_for 'ls ${data}/flux/logs/*-server.log' 5)"
+check "the previous run's log is kept aside" "0" "$(status wait_for 'ls /mnt/scs/server/flux-logs/game/*-server.log' 5)"
+check "and not on the synced data volume" "1" "$(status test -e "${data}/flux/logs")"
 check "not counted as a crash" "0" "$(grep -c 'restarts within' /tmp/entry.log)"
 check "nothing pending after it" "False" "$(flux-scs status | python3 -c 'import json,sys;print(json.load(sys.stdin)["pending"])')"
 
@@ -134,7 +135,7 @@ wait_for '! kill -0 ${entry} 2>/dev/null' 20
 # --- American Truck Simulator --------------------------------------------------------------------
 ats_data=/tmp/ats-data
 SCS_GAME=ats FLUX_DATA_DIR="${ats_data}" FLUX_STATE_DIR="${ats_data}/flux" FLUX_SERVER_DIR=/tmp/ats-server \
-  FLUX_GAME_LOG_DIR="${ats_data}/flux/logs" FLUX_UPDATE_TARGET="${ats_data}/flux/update-target" FLUX_UPDATE_FAILED="${ats_data}/flux/update-failed" \
+  FLUX_UPDATE_TARGET="${ats_data}/flux/update-target" FLUX_UPDATE_FAILED="${ats_data}/flux/update-failed" \
   /opt/flux/flux-entrypoint.sh >/tmp/entry-ats.log 2>&1 &
 entry=$!
 check "ATS: the server comes up" "0" "$(status wait_for 'grep -q "\"running\"" ${ats_data}/flux/state.json 2>/dev/null' 30)"

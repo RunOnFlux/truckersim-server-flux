@@ -24,7 +24,9 @@ FLUX_RESTORE_MARKER="${FLUX_RESTORE_MARKER:-/tmp/flux-restore-requested}"
 # failed target for FLUX_UPDATE_RETRY_HOURS instead of restarting for it over and over).
 FLUX_UPDATE_TARGET="${FLUX_UPDATE_TARGET:-${FLUX_STATE_DIR}/update-target}"
 FLUX_UPDATE_FAILED="${FLUX_UPDATE_FAILED:-${FLUX_STATE_DIR}/update-failed}"
-FLUX_GAME_LOG_DIR="${FLUX_GAME_LOG_DIR:-${FLUX_STATE_DIR}/logs}"
+# The game's own rotated logs (<stamp>-server.log) sit next to flux.log, also local: they are rewritten
+# on every start and would otherwise be Syncthing traffic. The synced ${FLUX_STATE_DIR}/logs is the old place.
+FLUX_GAME_LOG_DIR="${FLUX_GAME_LOG_DIR:-${FLUX_LOG_DIR}/game}"
 FLUX_GAME_LOG_KEEP="${FLUX_GAME_LOG_KEEP:-5}"
 
 # $1 = SCS_GAME. Prints "<steam app> <binary> <home folder>", or returns 1 for an unknown game.
@@ -83,6 +85,22 @@ flux_log_migrate() {
       cat "${old}" >>"${FLUX_LOG}" 2>/dev/null || continue
     fi
     rm -f "${old}" "${old}.tmp"
+  done
+  return 0
+}
+
+# Once per start: the files in an old game-log folder ($2..) on the synced data volume are moved
+# into $1 and the folder is removed there. Nothing to do when it is absent or is $1 itself.
+flux_game_logs_migrate() {
+  local dest="$1" old f
+  shift
+  for old in "$@"; do
+    [ -d "${old}" ] && [ "${old}" != "${dest}" ] || continue
+    mkdir -p "${dest}" 2>/dev/null || continue
+    for f in "${old}"/*; do
+      [ -f "${f}" ] && mv -f "${f}" "${dest}/" 2>/dev/null
+    done
+    rmdir "${old}" 2>/dev/null || rm -rf "${old}"
   done
   return 0
 }
