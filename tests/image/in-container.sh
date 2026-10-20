@@ -133,7 +133,7 @@ wait_for '! kill -0 ${entry} 2>/dev/null' 20
 
 # --- American Truck Simulator --------------------------------------------------------------------
 ats_data=/tmp/ats-data
-SCS_GAME=ats FLUX_DATA_DIR="${ats_data}" FLUX_STATE_DIR="${ats_data}/flux" FLUX_SERVER_DIR=/tmp/ats-server FLUX_LOG="${ats_data}/flux/flux.log" \
+SCS_GAME=ats FLUX_DATA_DIR="${ats_data}" FLUX_STATE_DIR="${ats_data}/flux" FLUX_SERVER_DIR=/tmp/ats-server \
   FLUX_GAME_LOG_DIR="${ats_data}/flux/logs" FLUX_UPDATE_TARGET="${ats_data}/flux/update-target" FLUX_UPDATE_FAILED="${ats_data}/flux/update-failed" \
   /opt/flux/flux-entrypoint.sh >/tmp/entry-ats.log 2>&1 &
 entry=$!
@@ -143,6 +143,21 @@ check "ATS: on the USA base map, reported as the default" "/map/usa.mbd True" "$
 check "ATS: the status says the game" "ats" "$(SCS_GAME=ats FLUX_DATA_DIR=${ats_data} FLUX_STATE_DIR=${ats_data}/flux flux-scs status | python3 -c 'import json,sys;print(json.load(sys.stdin)["game"])')"
 kill -TERM "${entry}"
 check "ATS: a stop ends the supervisor" "0" "$(status wait_for '! kill -0 ${entry} 2>/dev/null' 20)"
+
+# --- flux.log is local; the banner ----------------------------------------------------------------
+logf=/mnt/scs/server/flux-logs/flux.log
+check "flux.log is on the install volume" "0" "$(status test -s "${logf}")"
+check "and not on the synced data volume" "1" "$(status test -e "${data}/flux/flux.log")"
+check "the banner is in the container output" "0" "$(status grep -q 'Euro Truck Simulator 2 server image by FluxCloud - https://runonflux.com' /tmp/entry.log)"
+check "and in flux.log" "0" "$(status grep -q 'Host this and 30+ other games in one click: https://runonflux.com/games' "${logf}")"
+check "at the container start and again for each generation" "1" "$([ "$(grep -c 'server image by FluxCloud' /tmp/entry.log)" -ge 2 ] && echo 1 || echo 0)"
+
+logf=/tmp/ats-server/flux-logs/flux.log
+check "ATS: flux.log is on the install volume" "0" "$(status test -s "${logf}")"
+check "ATS: and not on the synced data volume" "1" "$(status test -e "${ats_data}/flux/flux.log")"
+check "ATS: the banner is in the container output" "0" "$(status grep -q 'American Truck Simulator server image by FluxCloud - https://runonflux.com' /tmp/entry-ats.log)"
+check "ATS: and in flux.log" "0" "$(status grep -q 'Host this and 30+ other games in one click: https://runonflux.com/games' "${logf}")"
+check "ATS: at the container start and again for each generation" "1" "$([ "$(grep -c 'server image by FluxCloud' /tmp/entry-ats.log)" -ge 2 ] && echo 1 || echo 0)"
 
 printf '\n%d passed, %d failed\n' "${pass}" "${fail}"
 [ "${fail}" = "0" ] || { echo '--- entrypoint log'; cat /tmp/entry.log; echo '--- ats'; cat /tmp/entry-ats.log 2>/dev/null; exit 1; }

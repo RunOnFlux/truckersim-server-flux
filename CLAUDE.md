@@ -31,3 +31,4 @@ docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:stable -x scripts/*.s
   run's lines for readiness or the roster. The parser keeps its place in /tmp.
 - **Real exports write DLC as unsigned numbers**: a quoted value stops the server. Never name DLC.
 - **Logon tokens are for the GAME's app** (227300 ETS2, 270880 ATS), not the server's.
+- **flux.log is local** (`${FLUX_SERVER_DIR}/flux-logs/flux.log`, 5 MB + one `.1`, on the `ml:` mount), never the synced data volume. `flux_log_migrate` moves an older `flux/flux.log` there once. `entrypoint` creates the dir explicitly. The start-up banner is `flux_banner "<game>"` (container start and every generation); keep its text.

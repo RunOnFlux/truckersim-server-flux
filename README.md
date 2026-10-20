@@ -27,8 +27,8 @@ There is no world to save: a convoy server keeps none. There is no console and n
 
 | Path | Flux mount | What |
 |---|---|---|
-| `/mnt/scs/data` | `g:` (synced) | the server's home (`XDG_DATA_HOME`): `<game>/server_config.sii`, `config_ds.cfg`, `server_packages.sii/.dat`, `server.log.txt`, `banlist.txt`; and `flux/` |
-| `/mnt/scs/server` | `ml:server` (local) | the server, ~1.3 GB |
+| `/mnt/scs/data` | `g:` (synced) | the server's home (`XDG_DATA_HOME`): `<game>/server_config.sii`, `config_ds.cfg`, `server_packages.sii/.dat`, `server.log.txt`, `banlist.txt`; and `flux/` (state, backups) |
+| `/mnt/scs/server` | `ml:server` (local) | the server, ~1.3 GB, and our `flux-logs/flux.log` (5 MB, one `.1`) |
 
 ## Ports
 
@@ -80,6 +80,7 @@ cargo in convoys).
 
 ## Versions
 
+- **1.0.4** (2026-10-20): flux.log moved off the synced data volume to `flux-logs/flux.log` on the local install volume (5 MB, one `.1` rotated copy; an old one on the data volume is appended there once and deleted); the FluxCloud start-up banner at container start and on every server generation; the scheduled build runs on Mondays and publishes only for an urgent security update or commits the published image does not have. (Banner names the running game.)
 - **1.0.3** (2026-10-17): `restart` with no game process no longer answers "not running" while the
   supervisor is alive (downloading, backing off, waiting for packages), so the panel never restarts
   the container over a first download or onto the same refused packages.

@@ -35,7 +35,9 @@ d="${FLUX_DATA_DIR}"
 scs() { python3 /opt/flux/fluxscs.py "$@"; }
 
 rm -f "${FLUX_RESTART_MARKER}"
-mkdir -p "${s}" "${d}" "${FLUX_STATE_DIR}" "${FLUX_GAME_LOG_DIR}"
+mkdir -p "${s}" "${d}" "${FLUX_STATE_DIR}" "${FLUX_GAME_LOG_DIR}" "$(dirname "${FLUX_LOG}")"
+# An older image kept flux.log on the synced data volume: move it here, once.
+flux_log_migrate "${FLUX_STATE_DIR}/flux.log"
 
 if ! game="$(flux_scs_game "${SCS_GAME:-ets2}")"; then
   flux_log "ERROR SCS_GAME='${SCS_GAME}' is neither ets2 nor ats; refusing to start"
@@ -43,6 +45,7 @@ if ! game="$(flux_scs_game "${SCS_GAME:-ets2}")"; then
 fi
 read -r app binary home <<<"${game}"
 export SCS_GAME="${SCS_GAME:-ets2}"
+flux_banner "${home}"
 if ! port="$(flux_valid_port "${SCS_PORT:-}" 27015)" || ! query_port="$(flux_valid_port "${SCS_QUERY_PORT:-}" $((port + 1)))"; then
   flux_log "ERROR SCS_PORT / SCS_QUERY_PORT are not ports; refusing to start"
   exit 42
@@ -238,6 +241,7 @@ start_generation() {
   rotate_log
 
   scs state starting "Loading the map"
+  flux_banner "${home}"
   flux_log "starting the server (generation ${generation})"
   (
     cd "${s}/bin/linux_x64" || exit 1
