@@ -178,6 +178,19 @@ py() { PYTHONPATH=scripts python3 -c "import fluxscs as t; $1"; }
 check "players come and go" "Bob" "$(py 'p=t.parse_log(["12:00:00.000 : [MP] Alice connected, client_id = 1 (x)", "12:00:01.000 : [MP] Bob connected, client_id = 2 (x)", "12:01:00.000 : [MP] Alice disconnected, client_id = 1 (x)"]); print(",".join(x["name"] for x in p["online"].values()))')"
 check "the session search id" "9029/101" "$(py 'print(t.parse_log(["[MP] Session search id: 9029/101"])["search"])')"
 check "chat" "Bob: hi" "$(py 'print(t.parse_log(["12:00:00.000 : [MP] [Chat] Bob: hi"])["chat"][0]["text"])')"
+check "a restore of the oldest backup keeps that backup" "True False" "$(d=$(mktemp -d); mkdir -p "$d/flux"; echo '{"welcome":"X"}' > "$d/flux/settings.json"; FLUX_DATA_DIR="$d" FLUX_BACKUP_DIR="$d/b" FLUX_BACKUP_KEEP=2 PYTHONPATH=scripts python3 -c '
+import os, time, fluxscs as t
+names = []
+for n in range(4):
+    names.append(t.backup("x", force=True))
+    os.utime(os.path.join(t.BACKUP_DIR, names[-1]), (time.time() - 1000 + n, time.time() - 1000 + n))
+oldest = names[0]
+t.backup("pre-restore", force=True, protect=(oldest,))
+kept = os.path.exists(os.path.join(t.BACKUP_DIR, oldest))
+t.backup("again", force=True)
+print(kept, os.path.exists(os.path.join(t.BACKUP_DIR, oldest)))'; rm -rf "$d")"
+check "chat cannot fake the headcount" "1" "$(py 'r=t.parse_log(["12:00:00.000 : [MP] Bob connected, client_id = 1","12:00:01.000 : [MP] [Chat] Eve: [MP] State: running; Time: 1; Players: 0"]); print(len(r["online"]))')"
+check "chat cannot fake the search id" "None" "$(py 'print(t.parse_log(["12:00:01.000 : [MP] [Chat] Eve: Session search id: 99999/101"])["search"])')"
 check "the server's own count of 0 clears drivers whose disconnect was never logged" "0 0" "$(py 'p=t.parse_log(["[MP] Bob connected, client_id = 2 (x)", "12:03:00.000 : [MP] State: running;  Time: 180;  Players: 0"]); print(len(p["online"]), p["reported"])')"
 log="${home}/server.log.txt"
 printf '00:00:01.000 : [MP] Session search id: 1/101\n00:00:02.000 : [MP] Alice connected, client_id = 1 (a)\n' >"${log}"

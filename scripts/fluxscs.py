@@ -361,6 +361,12 @@ def parse_log(lines, start=None):
     online = dict(st.get("online") or {})
     search, version, chat, reported = st.get("search"), st.get("version"), list(st.get("chat") or []), st.get("reported")
     for line in lines:
+        # A chat line is only chat: a player typing "[MP] State: ...; Players: 0" or "Session search
+        # id: ..." must not move the roster, the headcount or the search id.
+        m = CHAT_RE.match(line)
+        if m:
+            chat.append({"time": m.group(1), "text": m.group(2)[:200]})
+            continue
         m = JOIN_RE.search(line)
         if m:
             online[m.group(2)] = {"name": m.group(1).strip(), "id": m.group(2)}
@@ -384,10 +390,7 @@ def parse_log(lines, start=None):
             v = VERSION_RE.search(line)
             if v:
                 version = v.group(1)
-        m = CHAT_RE.match(line)
-        if m:
-            chat.append({"time": m.group(1), "text": m.group(2)})
-    return {"online": online, "search": search, "version": version, "chat": chat[-50:], "reported": reported}
+    return {"online": online, "search": search, "version": version, "chat": chat[-30:], "reported": reported}
 
 
 def read_log_incremental():
@@ -584,7 +587,7 @@ def backups_to_prune(rows, now, keep=BACKUP_KEEP):
     return [name for name, _ in rows if name not in keep_names]
 
 
-def backup(reason, force=False):
+def backup(reason, force=False, protect=()):
     """A backup now. Unless forced, skipped when the newest one is younger than
     FLUX_BACKUP_MIN_AGE_MINUTES (a start right after another start adds nothing)."""
     now = time.time()
@@ -611,6 +614,9 @@ def backup(reason, force=False):
     index = read_json(BACKUP_INDEX, {}) or {}
     index[name] = reason
     for old in backups_to_prune([(n, m) for n, _, m, _ in list_backups()], now):
+        # The backup a restore is about to read is never pruned by the safety backup made first.
+        if old in protect:
+            continue
         try:
             os.remove(os.path.join(BACKUP_DIR, old))
         except OSError:
@@ -660,7 +666,7 @@ def cmd_restore_apply(name):
     if not BACKUP_NAME_RE.match(name) or not os.path.isfile(path):
         print(f"# WARN restore: no backup {name}")
         return
-    safety = backup("pre-restore", force=True) or "(nothing to keep)"
+    safety = backup("pre-restore", force=True, protect=(name,)) or "(nothing to keep)"
     staging = tempfile.mkdtemp(dir=DATA_DIR, prefix=".flux-restore-")
     try:
         with tarfile.open(path, "r:gz") as tar:
