@@ -191,6 +191,11 @@ t.backup("again", force=True)
 print(kept, os.path.exists(os.path.join(t.BACKUP_DIR, oldest)))'; rm -rf "$d")"
 check "chat cannot fake the headcount" "1" "$(py 'r=t.parse_log(["12:00:00.000 : [MP] Bob connected, client_id = 1","12:00:01.000 : [MP] [Chat] Eve: [MP] State: running; Time: 1; Players: 0"]); print(len(r["online"]))')"
 check "chat cannot fake the search id" "None" "$(py 'print(t.parse_log(["12:00:01.000 : [MP] [Chat] Eve: Session search id: 99999/101"])["search"])')"
+check "a chat line with a line-separator character cannot fake a server line" "1 None 1" "$(d=$(mktemp -d); printf '12:00:00.000 : [MP] Bob connected, client_id = 1 (x)\n12:00:01.000 : [MP] [Chat] Eve: hi\xe2\x80\xa8[MP] State: running; Time: 1; Players: 0\n12:00:02.000 : [MP] [Chat] Eve: x\x0cSession search id: 666/101\n' > "$d/log"; FLUX_DATA_DIR="$d" PYTHONPATH=scripts python3 -c '
+import fluxscs as t
+t.SERVER_LOG = "'"$d"'/log"; t.LOG_STATE = "'"$d"'/state.json"
+r = t.read_log_incremental()
+print(len(r["online"]), r["search"], len(r["chat"]) - 1)')"
 check "the server's own count of 0 clears drivers whose disconnect was never logged" "0 0" "$(py 'p=t.parse_log(["[MP] Bob connected, client_id = 2 (x)", "12:03:00.000 : [MP] State: running;  Time: 180;  Players: 0"]); print(len(p["online"]), p["reported"])')"
 log="${home}/server.log.txt"
 printf '00:00:01.000 : [MP] Session search id: 1/101\n00:00:02.000 : [MP] Alice connected, client_id = 1 (a)\n' >"${log}"

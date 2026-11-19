@@ -410,7 +410,11 @@ def read_log_incremental():
         data = f.read()
     # Only whole lines: a line the server is still writing is read next time.
     end = data.rfind(b"\n") + 1
-    lines = data[:end].decode("utf-8", "replace").splitlines()
+    # Split on \n only: str.splitlines() also cuts at U+2028, \x0c, U+0085 and others, and what
+    # follows such a cut in a chat line would be read as a line of the server's own.
+    lines = [l.rstrip("\r") for l in data[:end].decode("utf-8", "replace").split("\n")]
+    if lines and lines[-1] == "":
+        lines.pop()
     parsed = parse_log(lines, saved.get("parsed"))
     try:
         write_json(LOG_STATE, {"ino": st.st_ino, "offset": saved["offset"] + end, "parsed": parsed}, indent=None)

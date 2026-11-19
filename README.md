@@ -80,7 +80,7 @@ cargo in convoys).
 
 ## Versions
 
-- **1.0.6** (2026-11-18): restoring a backup never deletes that backup (the safety backup made first could prune the oldest one before it was read); a chat line can no longer fake the roster, the headcount or the session search id (chat lines are matched first and only as chat); status carries the last 30 chat lines of at most 200 characters.
+- **1.0.6** (2026-11-18): restoring a backup never deletes that backup (the safety backup made first could prune the oldest one before it was read); a chat line can no longer fake the roster, the headcount or the session search id (chat lines are matched first and only as chat, and the log is split on newlines only, so a line-separator character in chat cannot start a fake server line; a player whose Steam name begins with "[Chat] " is therefore shown as chat, not in the roster); status carries the last 30 chat lines of at most 200 characters.
 - **1.0.5** (2026-10-20): the game's rotated logs (`<stamp>-server.log`, newest 5 kept) moved off the synced data volume to `flux-logs/game/` on the local install volume; the old `flux/logs` folder is emptied into it once and removed.
 - **1.0.4** (2026-10-20): flux.log moved off the synced data volume to `flux-logs/flux.log` on the local install volume (5 MB, one `.1` rotated copy; an old one on the data volume is appended there once and deleted); the FluxCloud start-up banner at container start and on every server generation; the scheduled build runs on Mondays and publishes only for an urgent security update or commits the published image does not have. (Banner names the running game.)
 - **1.0.3** (2026-10-17): `restart` with no game process no longer answers "not running" while the
